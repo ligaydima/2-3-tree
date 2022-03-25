@@ -1,7 +1,6 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-using namespace std;
 
 template<class ValueType>
 class Set {
@@ -16,18 +15,18 @@ private:
         class Node {
         public:
             Node* parent;
-            vector<Node*> children;
+            std::vector<Node*> children;
 
             T min_key;
             T max_key;
 
-            Node(const vector<Node*>& children, Node* parent) : parent(parent), children(children) {
+            Node(const std::vector<Node*>& children, Node* parent) : parent(parent), children(children) {
                 sort_children();
                 max_key = children.back()->max_key;
                 min_key = children[0]->min_key;
             }
 
-            Node(const T& x, Node* parent) : parent(parent), children({}), min_key(x), max_key(x) {}
+            Node(const T& value, Node* parent) : parent(parent), children({}), min_key(value), max_key(value) {}
 
             Node(const Node* x) : parent(x->parent), children(x->children), min_key(x->min_key), max_key(x->max_key) {}
 
@@ -44,9 +43,9 @@ private:
                 min_key = children[0]->min_key;
             }
 
-            void delete_child(Node* v) {
+            void delete_child(Node* vertex) {
                 for (auto it = children.begin(); it != children.end(); ++it) {
-                    if ((*it) == v) {
+                    if ((*it) == vertex) {
                         children.erase(it);
                         break;
                     }
@@ -54,18 +53,18 @@ private:
                 recalc();
             }
 
-            size_t child_pos(Node* v) {
+            size_t child_pos(Node* vertex) {
                 for (size_t i = 0; i < children.size(); ++i) {
-                    if (children[i] == v) {
+                    if (children[i] == vertex) {
                         return i;
                     }
                 }
                 return 0;
             }
 
-            void add_child(Node* v) {
-                v->parent = this;
-                children.push_back(v);
+            void add_child(Node* vertex) {
+                vertex->parent = this;
+                children.push_back(vertex);
                 sort_children();
                 recalc();
             }
@@ -116,7 +115,9 @@ private:
 
         private:
             void increment() {
-                if (node_ == nullptr) return;
+                if (node_ == nullptr) {
+                    return;
+                }
                 T cur_key = node_->max_key;
                 while (node_ != nullptr && !(cur_key < node_->max_key)) {
                     node_ = node_->parent;
@@ -171,7 +172,9 @@ private:
 
         Iterator begin() const {
             Node* cur = root_;
-            if (cur == nullptr) return {root_, root_};
+            if (cur == nullptr) {
+                return {root_, root_};
+            }
             while (cur->children.size() > 0) {
                 cur = cur->children[0];
             }
@@ -182,34 +185,38 @@ private:
             return Iterator(nullptr, root_);
         }
 
-        bool insert(const T& x) {
+        bool insert(const T& value) {
             if (root_ == nullptr) {
-                root_ = new Node(x, nullptr);
+                root_ = new Node(value, nullptr);
                 return true;
             }
-            Node* cur = descend(x);
-            if (!(cur->min_key < x) && !(x < cur->min_key)) {
+            Node* cur = descend(value);
+            if (!(cur->min_key < value) && !(value < cur->min_key)) {
                 return false;
             }
             if (cur->parent == nullptr) {
-                Node* new_root = new Node(vector<Node*>{cur}, nullptr);
+                Node* new_root = new Node(std::vector<Node*>{cur}, nullptr);
                 root_->parent = new_root;
                 root_ = new_root;
-                root_->add_child(new Node(x, root_));
+                root_->add_child(new Node(value, root_));
                 return true;
             }
             cur = cur->parent;
-            Node* new_node = new Node(x, cur);
+            Node* new_node = new Node(value, cur);
             cur->add_child(new_node);
             recalc_on_path(new_node);
             split_parent(cur);
             return true;
         }
 
-        bool erase(const T& x) {
-            if (root_ == nullptr) return false;
-            Node* cur = descend(x);
-            if (cur->min_key < x || x < cur->min_key) return false;
+        bool erase(const T& value) {
+            if (root_ == nullptr) {
+                return false;
+            }
+            Node* cur = descend(value);
+            if (cur->min_key < value || value < cur->min_key) {
+                return false;
+            }
             Node* to_delete = cur;
             cur = cur->parent;
             if (cur == nullptr) {
@@ -230,7 +237,9 @@ private:
                 }
                 size_t cur_pos = cur->parent->child_pos(cur);
                 size_t neig_pos = 0;
-                if (cur_pos != 1) neig_pos = 1;
+                if (cur_pos != 1) {
+                    neig_pos = 1;
+                }
                 Node* neig_node = cur->parent->children[neig_pos];
                 neig_node->add_child(cur->children[0]);
                 cur->parent->delete_child(cur);
@@ -275,21 +284,21 @@ private:
     private:
         Node* root_;
 
-        void dfs_copy(Node* v) {
-            if (v == nullptr) return;
-            for (size_t i = 0; i < v->children.size(); ++i) {
-                v->children[i] = new Node(v->children[i]);
-                v->children[i]->parent = v;
-                dfs_copy(v->children[i]);
+        void dfs_copy(Node* vertex) {
+            if (vertex == nullptr) return;
+            for (size_t i = 0; i < vertex->children.size(); ++i) {
+                vertex->children[i] = new Node(vertex->children[i]);
+                vertex->children[i]->parent = vertex;
+                dfs_copy(vertex->children[i]);
             }
         }
 
-        void dfs_delete(Node* v) {
-            if (v == nullptr) return;
-            for (Node* x: v->children) {
+        void dfs_delete(Node* vertex) {
+            if (vertex == nullptr) return;
+            for (Node* x: vertex->children) {
                 dfs_delete(x);
             }
-            delete v;
+            delete vertex;
         }
 
         Node* descend(const T& x) const {
@@ -311,32 +320,34 @@ private:
             return cur;
         }
 
-        void recalc_on_path(Node* v) {
-            if (v == nullptr) return;
-            v = v->parent;
-            while (v != nullptr) {
-                v->recalc();
-                v = v->parent;
+        void recalc_on_path(Node* vertex) {
+            if (vertex == nullptr) {
+                return;
+            }
+            vertex = vertex->parent;
+            while (vertex != nullptr) {
+                vertex->recalc();
+                vertex = vertex->parent;
             }
         }
 
-        void split_parent(Node* v) {
-            while (v != nullptr && v->children.size() > 3) {
-                Node* a = new Node(vector<Node*>{v->children[2], v->children[3]}, v->parent);
-                v->children[2]->parent = a;
-                v->children[3]->parent = a;
-                v->children.pop_back();
-                v->children.pop_back();
-                v->recalc();
-                if (v->parent == nullptr) {
-                    Node* new_root = new Node(vector<Node*>{root_, a}, nullptr);
+        void split_parent(Node* vertex) {
+            while (vertex != nullptr && vertex->children.size() > 3) {
+                Node* a = new Node(std::vector<Node*>{vertex->children[2], vertex->children[3]}, vertex->parent);
+                vertex->children[2]->parent = a;
+                vertex->children[3]->parent = a;
+                vertex->children.pop_back();
+                vertex->children.pop_back();
+                vertex->recalc();
+                if (vertex->parent == nullptr) {
+                    Node* new_root = new Node(std::vector<Node*>{root_, a}, nullptr);
                     root_->parent = new_root;
                     a->parent = new_root;
                     root_ = new_root;
                     break;
                 }
-                v->parent->add_child(a);
-                v = v->parent;
+                vertex->parent->add_child(a);
+                vertex = vertex->parent;
             }
         }
 
@@ -362,7 +373,9 @@ public:
     }
 
     Set<ValueType>& operator=(const Set<ValueType>& other) {
-        if (tree_ == other.tree_) return *this;
+        if (tree_ == other.tree_) {
+            return *this;
+        }
         tree_.clear_tree();
         tree_.deep_copy(other.tree_);
         size_ = other.size_;
@@ -378,11 +391,15 @@ public:
     }
 
     void insert(const ValueType& elem) {
-        if (tree_.insert(elem)) ++size_;
+        if (tree_.insert(elem)) {
+            ++size_;
+        }
     }
 
     void erase(const ValueType& elem) {
-        if (tree_.erase(elem)) --size_;
+        if (tree_.erase(elem)) {
+            --size_;
+        }
     }
 
     typedef typename Tree<ValueType>::Iterator iterator;
